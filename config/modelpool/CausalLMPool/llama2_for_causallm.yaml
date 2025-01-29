@@ -1,0 +1,20 @@
+_target_: fusion_bench.modelpool.CausalLMPool
+_recursive_: false
+# each model should have a name and a path, and the model is loaded from the path
+# this is equivalent to `AutoModelForCausalLM.from_pretrained(path)`
+models:
+  _pretrained_:
+    _target_: transformers.LlamaForCausalLM.from_pretrained
+    pretrained_model_name_or_path: /data2/shared_resources/models/llama2/hf/llama-2-7b
+  expert_1:
+    _target_: transformers.LlamaForCausalLM.from_pretrained
+    pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_pe
+  expert_2:
+    _target_: transformers.LlamaForCausalLM.from_pretrained
+    pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_copynext
+
+model_kwargs:
+  torch_dtype: bfloat16
+tokenizer:
+  _target_: transformers.AutoTokenizer.from_pretrained
+  pretrained_model_name_or_path: /data2/shared_resources/models/llama2/hf/llama-2-7b
