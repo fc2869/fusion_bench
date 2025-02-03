@@ -47,6 +47,7 @@ def evaluate_accuracy(model, val_loader: DataLoader, tokenizer, max_output_lengt
     total = 0
 
     model = model.eval()
+    all_outputs = {"output": [], "label": [],"correct": []}
     for batch_idx, batch in enumerate(
         tqdm(
             val_loader, desc="Evaluate Exact Accuracy", leave=False, dynamic_ncols=True
@@ -55,22 +56,26 @@ def evaluate_accuracy(model, val_loader: DataLoader, tokenizer, max_output_lengt
         with torch.no_grad():
             outputs = model.generate(**batch, max_length=max_output_length,do_sample=do_sample)
             output_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-
             labels = [
                 remove_special_tokens(tokenizer, label_token)
                 for label_token in batch["labels"]
             ]
             labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-            assert sep in output_text[0]
-            output_text = [seq.split(sep)[-1].lstrip().rstrip().lower() for seq in output_text]
+            if sep in output_text[0]:
+                output_text = [seq.split(sep)[-1].lstrip().rstrip().lower() for seq in output_text]
             # compare output_text and labels
             for i, j in zip(output_text, labels):
                 if i == j:
                     correct += 1
+                    all_outputs["correct"].append(True)
+                else:
+                    all_outputs["correct"].append(False)
                 total += 1
+            all_outputs["output"].extend(output_text)
+            all_outputs["label"].extend(labels)
 
     # return accuracy
-    return correct / total
+    return correct / total, all_outputs
 
 
 def evaluate_spearman_rho(model, val_loader: DataLoader, tokenizer):

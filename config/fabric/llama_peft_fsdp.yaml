@@ -1,5 +1,5 @@
 defaults:
-  - loggers: tensorboard_logger
+  - loggers: wandb_logger
   - strategy: llama_peft_fsdp
   - _self_
 

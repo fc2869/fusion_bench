@@ -3,6 +3,8 @@ from typing import Union
 from omegaconf import DictConfig
 from tqdm.autonotebook import tqdm
 from fusion_bench.tasks import BaseTask
+from torch.utils.data import DataLoader
+from transformers import AutoTokenizer, default_data_collator
 from fusion_bench.tasks.PEN.pen_load_dataset import (
     load_pen_dataset,
 )
@@ -14,6 +16,10 @@ from fusion_bench.compat.taskpool import TaskPool
 from fusion_bench.mixins import LightningFabricMixin
 from transformers import LlamaForCausalLM
 import torch
+import os
+import json
+import logging
+log = logging.getLogger(__name__)
 
 PEN_TASKS = [
     "pen"
@@ -73,9 +79,14 @@ class PENTask(BaseTask):
 
     @torch.no_grad()
     def evaluate(self, model):
-        exact_acc = evaluate_accuracy(model, self.test_loader, self.tokenizer)
+        exact_acc, outputs = evaluate_accuracy(model, self.test_loader, self.tokenizer)
         result = {"accuracy": exact_acc}
         log.info(f'result for task "{self.config.name}": {result}')
+        log.info(f"Writing outputs to {self.taskpool.config.output_dir}")
+        eval_output_dir = os.path.join(self.taskpool.config.output_dir,"eval_outputs")
+        os.makedirs(eval_output_dir, exist_ok=True)
+        with open(os.path.join(eval_output_dir,f"outputs.json"),"w") as f:
+            json.dump(outputs,f)
         return result
 
 
@@ -125,13 +136,6 @@ class PENTaskPool(LightningFabricMixin, TaskPool):
         """
         
         report = {}
-        training_params, all_params = count_parameters(model)
-        report["model_info"] = {
-            "trainable_params": training_params,
-            "all_params": all_params,
-            "trainable_percentage": training_params / all_params,
-        }
-        model = self.fabric.setup(model)
         report.update(super().evaluate(model))
         log.info(f"evaluation report: {report}")
         return report

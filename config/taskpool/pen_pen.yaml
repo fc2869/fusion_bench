@@ -1,13 +1,16 @@
-name: dummy # whatever you want to name your task pool
+name: pen_pen # whatever you want to name your task pool
 type: PENTaskPool
 tasks:
   - name: pen
     dataset:
       name: pen
+      split: test
 
-tokenizer: /data2/shared_resources/models/llama2/hf/llama-2-7b
+# tokenizer: /data2/shared_resources/models/llama2/hf/llama-2-7b
+tokenizer: meta-llama/Llama-2-7b-hf
 # cache directory for storing the preprocessed data
 cache_dir: outputs/cache
 batch_size: 8
 num_workers: 4
 fast_dev_run: ${fast_dev_run}
+output_dir: outputs

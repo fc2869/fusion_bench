@@ -59,7 +59,7 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
             "padding": "max_length",
             "truncation": True,
             "return_tensors": "pt",
-            "max_length": 10,
+            "max_length": 4096,
         },
     )
 
@@ -84,7 +84,8 @@ def load_pen_dataset(
     tokenizer,
     cache_dir: Optional[str] = "outputs/cache",
     split: Optional[str] = None,
-    split_dir: str = "/home/fcyin/interp/custom-llama/algorithmic_composition/data/tokenized_v2/pen"
+    # split_dir: str = "/home/fcyin/interp/custom-llama/algorithmic_composition/data/tokenized_v2/pen"
+    split_dir: str = "/work/10269/fcyin/algorithmic_composition/data/tokenized_v2/pen"
 ):
     with timeit_context(f"Loading {name} dataset"):
         if cache_dir is not None:
@@ -113,7 +114,7 @@ def load_pen_dataset(
 
 if __name__ == "__main__":
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("/data2/shared_resources/models/llama2/hf/llama-2-7b",model_max_length=4096)
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf",model_max_length=4096)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
