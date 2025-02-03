@@ -4,7 +4,6 @@ from .datasets_preprocess import DatasetPreprocessor, preprocess
 
 
 class PEN_Preprocessor(DatasetPreprocessor):
-
     def preprocess(self, sentence: str, label: int):
         input_text = self.template["prompt"].format(sentence=sentence)
         target_text = self.template["label"].format(label=label)

@@ -69,3 +69,8 @@ class DatasetPreprocessor:
                 raise ValueError(
                     "Template must be a path to a json file or a dictionary"
                 )
+        else:
+            self.template = {
+                "prompt": "{sentence}",
+                "label": "{label}"
+            }

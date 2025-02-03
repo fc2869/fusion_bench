@@ -17,7 +17,8 @@ from transformers.data.data_collator import (
     DataCollatorForLanguageModeling,
     default_data_collator,
 )
-
+from torch.nn.parallel import DistributedDataParallel
+from accelerate import Accelerator
 from fusion_bench import BaseAlgorithm
 from fusion_bench.method.simple_average import simple_average
 from fusion_bench.mixins import LightningFabricMixin, SimpleProfilerMixin
@@ -177,6 +178,7 @@ class LayerWiseAdaMergingForLlamaSFT(
 
         # we only merge the backbone
         pretrained_model = pretrained_causal_lm.model.layers
+        
         finetuned_models = [
             modelpool.load_model(name).model.layers for name in modelpool.model_names
         ]
@@ -229,6 +231,22 @@ class LayerWiseAdaMergingForLlamaSFT(
             pretrained_causal_lm.model.layers[layer_idx] = module
 
         fix_other_parts(pretrained_causal_lm)
+        
+        def check_and_move_model(model):
+            # Check current parameter locations
+            devices = set()
+            for name, param in model.named_parameters():
+                if str(param.device) == 'cpu' :
+                    param.data = param.data.to('cuda')
+            
+            return model
+
+        # Use it before DDP setup
+        # pretrained_causal_lm = check_and_move_model(pretrained_causal_lm)
+        # print("I am here 1")
+        ## Hard code converting the modifed model to DDP 
+        # pretrained_causal_lm = DistributedDataParallel(pretrained_causal_lm, device_ids=None)
+        # print("I am here 2")
         return pretrained_causal_lm
 
     def configure_optimizer(self, module: nn.Module):
@@ -243,7 +261,6 @@ class LayerWiseAdaMergingForLlamaSFT(
     def train(self, causal_lm):
         fabric = self.fabric
         modelpool = self.modelpool
-
         with self.profile("load datasets and setup dataloaders"):
             train_datasets = {
                 dataset_name: modelpool.load_train_dataset(dataset_name)
@@ -263,18 +280,31 @@ class LayerWiseAdaMergingForLlamaSFT(
                 dataset_name: iter(InfiniteDataLoader(loader))
                 for dataset_name, loader in train_loaders.items()
             }
+        
 
         optimizer = self.configure_optimizer(causal_lm)["optimizer"]
+        # causal_lm, optimizer, train_loader_iters = Accelerator.prepare(
+        #     train_loader_iters,
+        #     causal_lm,
+        #     optimizer,
+        # )
         causal_lm, optimizer = cast(
             Tuple[nn.Module, torch.optim.Optimizer],
-            fabric.setup(causal_lm, optimizer),
+            fabric.setup(
+                causal_lm, 
+                optimizer,
+                # move_to_device=False
+            ),
         )
+        print("I am here 3")
 
         causal_lm.train()
         merge_weights(causal_lm)
+        
 
         self.save_state("init", causal_lm)
-
+        print("fabric device:",fabric.device)
+        # causal_lm = causal_lm.to("cuda")
         assert len(train_datasets) > 0, "No training datasets are provided."
         for step_idx in tqdm(range(self.max_steps)):
             log_metrics = {}
@@ -283,6 +313,7 @@ class LayerWiseAdaMergingForLlamaSFT(
             for dataset_name, dataloader in train_loader_iters.items():
                 # compute loss
                 inputs = next(dataloader)
+                inputs = {k: v.to(fabric.device) for k, v in inputs.items()}
                 outputs = causal_lm(**inputs)
 
                 losses.append(outputs.loss)

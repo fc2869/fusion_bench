@@ -48,6 +48,10 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
     #         "return_tensors": "pt",
     #     }
     # )
+    if tokenizer.pad_token is None:
+        ## Temporary solution
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        # tokenizer.pad_token = tokenizer.eos_token
     preprocessor = PEN_Preprocessor(
         template=None,
         tokenizer=tokenizer,
@@ -55,6 +59,7 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
             "padding": "max_length",
             "truncation": True,
             "return_tensors": "pt",
+            "max_length": 10,
         },
     )
 
@@ -65,7 +70,6 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
         formatted_data = _format_prompt(data_json,append_label=False)
         dataset[split] = formatted_data
     dataset = DatasetDict(dataset)
-    
     dataset = dataset.map(
         preprocessor,
         batched=True,

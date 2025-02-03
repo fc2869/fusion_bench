@@ -254,6 +254,10 @@ class LayerWiseMergedModel(nn.Module, Generic[TorchModelType]):
                     for w, (name, param) in zip(weight, task_vector.named_parameters())
                 ]
             for w, (name, param) in zip(weight, task_vector.named_parameters()):
+                ## Temporary solution
+                # state_dict[name] = state_dict[name].to("cpu") + param.to("cpu") * w.to("cpu")
+                
+                # state_dict[name] = state_dict[name].to(param.device) + param * w.to(param.device) 
                 state_dict[name] = state_dict[name] + param * w
         self._merged_state_dict = state_dict
 

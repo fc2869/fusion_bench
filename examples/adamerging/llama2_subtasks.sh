@@ -1,6 +1,7 @@
 # Layer-wise adamerging
-fusion_bench \
+HYDRA_FULL_ERROR=1 NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1 fusion_bench \
     method=adamerging/llama2_subtasks \
-    method.optimizer.lr=1e-3 \
     modelpool=CausalLMPool/llama2_for_causallm \
-    taskpool=pen_pen
+    taskpool=pen_pen\
+    # fabric=llama_ddp
+
