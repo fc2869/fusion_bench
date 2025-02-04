@@ -59,7 +59,7 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
             "padding": "max_length",
             "truncation": True,
             "return_tensors": "pt",
-            "max_length": 4096,
+            "max_length": 2048,
         },
     )
 
@@ -68,6 +68,9 @@ def _load_pen_dataset(name, tokenizer,split_dir: str = None):
         data_json = json.load(open(data_dir,'r'))
         data_json = data_json["data"]
         formatted_data = _format_prompt(data_json,append_label=False)
+        ## Use a smaller test set for debugging
+        if split == 'test':
+            formatted_data = formatted_data.train_test_split(test_size=0.05,seed=42)['test']
         dataset[split] = formatted_data
     dataset = DatasetDict(dataset)
     dataset = dataset.map(

@@ -11,6 +11,7 @@ from fusion_bench.tasks.PEN.pen_load_dataset import (
 from fusion_bench.tasks.PEN.pen_evaluation import (
     evaluate_accuracy
 )
+import datetime
 import functools
 from fusion_bench.compat.taskpool import TaskPool
 from fusion_bench.mixins import LightningFabricMixin
@@ -82,9 +83,13 @@ class PENTask(BaseTask):
         exact_acc, outputs = evaluate_accuracy(model, self.test_loader, self.tokenizer)
         result = {"accuracy": exact_acc}
         log.info(f'result for task "{self.config.name}": {result}')
-        log.info(f"Writing outputs to {self.taskpool.config.output_dir}")
-        eval_output_dir = os.path.join(self.taskpool.config.output_dir,"eval_outputs")
+        
+        d = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        eval_output_dir = os.path.join(self.taskpool.config.output_dir,f"eval_outputs_{d}")
+        log.info(f"Writing outputs to {eval_output_dir}")
         os.makedirs(eval_output_dir, exist_ok=True)
+        ## Get the curretc date time in string format
+        
         with open(os.path.join(eval_output_dir,f"outputs.json"),"w") as f:
             json.dump(outputs,f)
         return result

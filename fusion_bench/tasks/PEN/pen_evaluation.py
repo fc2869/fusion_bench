@@ -29,7 +29,7 @@ def remove_special_tokens(tokenizer, token_list: list):
     return ret
 
 
-def evaluate_accuracy(model, val_loader: DataLoader, tokenizer, max_output_length: int = 512,do_sample:bool=False,sep:str=" answer:"):
+def evaluate_accuracy(model, val_loader: DataLoader, tokenizer, max_new_tokens: int = 512,do_sample:bool=False,sep:str=" answer:"):
     """
     This function evaluates the accuracy of a language model on a validation set.
 
@@ -54,7 +54,7 @@ def evaluate_accuracy(model, val_loader: DataLoader, tokenizer, max_output_lengt
         )
     ):
         with torch.no_grad():
-            outputs = model.generate(**batch, max_length=max_output_length,do_sample=do_sample)
+            outputs = model.generate(**batch, max_new_tokens=max_new_tokens,do_sample=do_sample)
             output_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             labels = [
                 remove_special_tokens(tokenizer, label_token)

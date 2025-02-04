@@ -66,6 +66,7 @@ class LayerWiseAdaMergingForLlamaSFT(
         skip_training: bool = False,
         save_interval: int = None,
         save_merged_model: bool = True,
+        accumulate_grad_batches: int = 1,
         **kwargs,
     ):
         R"""
@@ -110,6 +111,7 @@ class LayerWiseAdaMergingForLlamaSFT(
         self.skip_training = skip_training
         self.save_interval = save_interval
         self.save_merged_model = save_merged_model
+        self.accumulate_grad_batches = accumulate_grad_batches
         super().__init__(**kwargs)
 
     def run(self, modelpool: CausalLMPool):
@@ -296,7 +298,7 @@ class LayerWiseAdaMergingForLlamaSFT(
                 # move_to_device=False
             ),
         )
-        print("I am here 3")
+        # print("I am here 3")
 
         causal_lm.train()
         merge_weights(causal_lm)
@@ -307,16 +309,20 @@ class LayerWiseAdaMergingForLlamaSFT(
         # causal_lm = causal_lm.to("cuda")
         assert len(train_datasets) > 0, "No training datasets are provided."
         for step_idx in tqdm(range(self.max_steps)):
+            is_accumulating = (step_idx + 1) % self.accumulate_grad_batches != 0
             log_metrics = {}
 
             losses = []
             for dataset_name, dataloader in train_loader_iters.items():
+                
                 # compute loss
                 inputs = next(dataloader)
+
                 inputs = {k: v.to(fabric.device) for k, v in inputs.items()}
                 outputs = causal_lm(**inputs)
+                loss = outputs["loss"] / self.accumulate_grad_batches
 
-                losses.append(outputs.loss)
+                losses.append(loss)
 
             if len(losses) > 1:
                 total_loss = sum(losses)
