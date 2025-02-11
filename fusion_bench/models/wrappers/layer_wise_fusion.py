@@ -190,7 +190,6 @@ class LayerWiseMergedModel(nn.Module, Generic[TorchModelType]):
                     get_attr(m, name.split(".")).data = (
                         get_attr(m, name.split(".")) - param
                     )
-
         self.pretrained_model = pretrained_model.requires_grad_(False)
         for m in finetuned_models:
             m.requires_grad_(False)

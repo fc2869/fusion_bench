@@ -1,9 +1,9 @@
-name: pen_pen # whatever you want to name your task pool
-type: PENTaskPool
+name: perm_perm # whatever you want to name your task pool
+type: PERMTaskPool
 tasks:
-  - name: pen
+  - name: perm
     dataset:
-      name: pen
+      name: perm
       split: test
 
 # tokenizer: /data2/shared_resources/models/llama2/hf/llama-2-7b

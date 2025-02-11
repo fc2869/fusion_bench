@@ -177,24 +177,27 @@ class LayerWiseAdaMergingForLlamaSFT(
             LayerWiseMergedModel: An instance of the merged model with layer-wise weights applied.
         """
         pretrained_causal_lm = modelpool.load_model("_pretrained_")
-
+        
         # we only merge the backbone
-        pretrained_model = pretrained_causal_lm.model.layers
+        # pretrained_model = pretrained_causal_lm.model.layers
+        # We merge the backbone (layers) and the embedding layer and the lm_head
+        pretrained_model = pretrained_causal_lm
         
         finetuned_models = [
-            modelpool.load_model(name).model.layers for name in modelpool.model_names
+            # modelpool.load_model(name).model.layers for name in modelpool.model_names
+            modelpool.load_model(name) for name in modelpool.model_names
         ]
 
-        if self.start_layer_idx is not None and isinstance(self.start_layer_idx, float):
-            self.start_layer_idx = int(self.start_layer_idx * len(pretrained_model))
+        # if self.start_layer_idx is not None and isinstance(self.start_layer_idx, float):
+        #     self.start_layer_idx = int(self.start_layer_idx * len(pretrained_model))
 
-        if self.start_layer_idx is not None:
-            for layer_idx, layer in enumerate(pretrained_model[: self.start_layer_idx]):
-                pretrained_model[layer_idx] = simple_average(
-                    [m[layer_idx] for m in finetuned_models],
-                    base_module=pretrained_model[layer_idx],
-                )
-                pretrained_model[layer_idx].requires_grad_(False)
+        # if self.start_layer_idx is not None:
+        #     for layer_idx, layer in enumerate(pretrained_model[: self.start_layer_idx]):
+        #         pretrained_model[layer_idx] = simple_average(
+        #             [m[layer_idx] for m in finetuned_models],
+        #             base_module=pretrained_model[layer_idx],
+        #         )
+        #         pretrained_model[layer_idx].requires_grad_(False)
 
         if self.average_attntion:
             for layer_idx, layer in enumerate(pretrained_model):
@@ -207,7 +210,7 @@ class LayerWiseAdaMergingForLlamaSFT(
                 layer.self_attn.requires_grad_(False)
 
         # initialize layer-wise weights using the provided configuration `init_values` or load from file if `weights` is provided
-        for layer_idx, layer in enumerate(pretrained_model):
+        for layer_idx, layer in enumerate(pretrained_model.model.layers):
             if layer_idx < self.start_layer_idx:
                 continue
             layer_wise_weight = get_layer_wise_weights(
@@ -221,8 +224,8 @@ class LayerWiseAdaMergingForLlamaSFT(
 
             module = LayerWiseMergedModel(
                 layer_wise_weight=layer_wise_weight,
-                pretrained_model=pretrained_model[layer_idx],
-                finetuned_models=[m[layer_idx] for m in finetuned_models],
+                pretrained_model=pretrained_model.model.layers[layer_idx],
+                finetuned_models=[m.model.layers[layer_idx] for m in finetuned_models],
                 clamp_weights=self.clamp_weights,
                 tie_weights=self.tie_weights,
                 strict=self.strict,
@@ -231,6 +234,31 @@ class LayerWiseAdaMergingForLlamaSFT(
             )
 
             pretrained_causal_lm.model.layers[layer_idx] = module
+        # Initialize weights for the embedding and lm_head layers
+        for layer_idx, layer in enumerate([pretrained_model.model.embed_tokens, pretrained_model.lm_head]):
+            layer_wise_weight = get_layer_wise_weights(
+                num_models=len(modelpool.model_names),
+                num_layers=len(
+                    tuple(filter(lambda p: p.requires_grad, layer.parameters()))
+                ),
+                init_values=self.init_values,
+                dtype=get_dtype(layer),
+            )
+
+            module = LayerWiseMergedModel(
+                layer_wise_weight=layer_wise_weight,
+                pretrained_model=layer,
+                finetuned_models=[m.model.embed_tokens for m in finetuned_models] if layer_idx == 0 else [m.lm_head for m in finetuned_models] ,
+                clamp_weights=self.clamp_weights,
+                tie_weights=self.tie_weights,
+                strict=self.strict,
+                sparsity_ratio=self.sparsity_ratio,
+                normalized_merging_weights=self.normalized_merging_weights,
+            )
+            if layer_idx == 0:
+                pretrained_causal_lm.model.embed_tokens = module
+            else:
+                pretrained_causal_lm.lm_head = module
 
         fix_other_parts(pretrained_causal_lm)
         
@@ -261,6 +289,8 @@ class LayerWiseAdaMergingForLlamaSFT(
             raise ValueError(f"Unknown optmizer type {self.optimizer}")
 
     def train(self, causal_lm):
+        # tokenizer = self.modelpool.load_tokenizer()
+        # tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         fabric = self.fabric
         modelpool = self.modelpool
         with self.profile("load datasets and setup dataloaders"):
@@ -302,8 +332,13 @@ class LayerWiseAdaMergingForLlamaSFT(
 
         causal_lm.train()
         merge_weights(causal_lm)
-        
-
+        # trainable_params = []
+        # for p in causal_lm.parameters():
+        #     if p.requires_grad:
+        #         print(p)
+        #         trainable_params.append(p)
+        # print(f"Number of trainable params: {len(trainable_params)}")
+        # exit()
         self.save_state("init", causal_lm)
         print("fabric device:",fabric.device)
         # causal_lm = causal_lm.to("cuda")
@@ -313,23 +348,36 @@ class LayerWiseAdaMergingForLlamaSFT(
             log_metrics = {}
 
             losses = []
+            total_norm = 0.0
             for dataset_name, dataloader in train_loader_iters.items():
                 
                 # compute loss
                 inputs = next(dataloader)
+                # prompts = inputs["input_ids"]
+                # labels = inputs["labels"]
+                # labels[labels == -100] = tokenizer.pad_token_id
+                # print("prompts:", tokenizer.batch_decode(prompts))
+                # print(labels)
+                # print("labels:", tokenizer.batch_decode(labels))
+                # exit()
 
                 inputs = {k: v.to(fabric.device) for k, v in inputs.items()}
                 outputs = causal_lm(**inputs)
                 loss = outputs["loss"] / self.accumulate_grad_batches
-
                 losses.append(loss)
 
             if len(losses) > 1:
                 total_loss = sum(losses)
             else:
                 total_loss = losses[0]
-
+            # for p in causal_lm.parameters():
+            #     if p.grad is not None:
+            #         param_norm = p.grad.detach().data.norm(2)
+            #         total_norm += param_norm.item() ** 2
+            # total_norm = total_norm ** 0.5
+            
             log_metrics["train/loss"] = total_loss.item()
+            # log_metrics["train/grad_norm"] = total_norm
 
             fabric.backward(total_loss)
             optimizer.step()
@@ -361,6 +409,11 @@ class LayerWiseAdaMergingForLlamaSFT(
         for layer_idx, layer in enumerate(causal_lm.model.layers):
             if isinstance(layer, LayerWiseMergedModel):
                 state[f"layer_{layer_idx}"] = layer.merge_weight
+        if isinstance(causal_lm.model.embed_tokens, LayerWiseMergedModel):
+            state[f"embed_tokens"] = causal_lm.model.embed_tokens.merge_weight
+        if isinstance(causal_lm.lm_head, LayerWiseMergedModel):
+            state[f"lm_head"] = causal_lm.lm_head.merge_weight
+        
 
         if self.fabric.is_global_zero:
             os.makedirs(os.path.join(self.output_dir, "checkpoints"), exist_ok=True)

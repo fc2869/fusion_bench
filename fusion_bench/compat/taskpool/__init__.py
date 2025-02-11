@@ -22,6 +22,7 @@ class TaskPoolFactory:
         "FlanT5GLUETextGenerationTaskPool": ".flan_t5_glue_text_generation.FlanT5GLUETextGenerationTaskPool",
         "NYUv2TaskPool": "fusion_bench.taskpool.nyuv2_taskpool.NYUv2TaskPool",
         "PENTaskPool": ".pen.PENTaskPool",
+        "PERMTaskPool": ".perm.PERMTaskPool",
     }
 
     @staticmethod

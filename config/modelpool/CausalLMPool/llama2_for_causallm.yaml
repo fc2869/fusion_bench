@@ -10,11 +10,13 @@ models:
   expert_1:
     _target_: transformers.LlamaForCausalLM.from_pretrained
     # pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_pe
-    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_copynext
+    # pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_copynext
+    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/perm_pem
   expert_2:
     _target_: transformers.LlamaForCausalLM.from_pretrained
     # pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_copynext
-    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_pe
+    # pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_pe
+    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/perm_per
 
 model_kwargs:
   torch_dtype: bfloat16
@@ -22,10 +24,17 @@ tokenizer:
   _target_: transformers.AutoTokenizer.from_pretrained
   pretrained_model_name_or_path: meta-llama/Llama-2-7b-hf
 
-_dataset_loader: fusion_bench.tasks.PEN.pen_load_dataset.load_pen_dataset
+# _dataset_loader: fusion_bench.tasks.PEN.pen_load_dataset.load_pen_dataset
+# train_datasets:
+#   pen_pen:
+#     _target_: ${..._dataset_loader}
+#     name: pen
+#     tokenizer: ${...tokenizer}
+#     split: train
+_dataset_loader: fusion_bench.tasks.PERM.perm_load_dataset.load_perm_dataset
 train_datasets:
-  pen_pen:
+  perm_perm:
     _target_: ${..._dataset_loader}
-    name: pen
+    name: perm
     tokenizer: ${...tokenizer}
     split: train

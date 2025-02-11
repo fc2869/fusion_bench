@@ -17,7 +17,7 @@ optimizer: adam
 lr: 1e-4
 init_values: 0.5
 # if `clamp_weights` is true, the weights will be clamped to [0, 1]
-clamp_weights: false
+clamp_weights: true
 normalized_merging_weights: true
 # arguments of `functional_call`
 tie_weights: false
@@ -25,10 +25,10 @@ strict: false
 max_steps: 1000
 fast_dev_run: ${fast_dev_run}
 # the path for saving the merging weights
-save_interval: 200
+save_interval: 500
 save_merged_model: true
-
+accumulate_grad_batches: 4
 dataloader_kwargs:
-  batch_size: 8
+  batch_size: 1
   num_workers: 0
   shuffle: true

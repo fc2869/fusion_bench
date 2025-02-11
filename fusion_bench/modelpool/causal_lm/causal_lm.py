@@ -61,9 +61,10 @@ class CausalLMPool(BaseModelPool):
         model_kwargs.update(kwargs)
         if isinstance(model_name_or_config, str):
             log.info(f"Loading model: {model_name_or_config}", stacklevel=2)
-        ## Temporary solution
+        ## Temporary hard-coded solution
         model = super().load_model(model_name_or_config, *args, **model_kwargs)
-        model.resize_token_embeddings(model.config.vocab_size + 1, mean_resizing=False)
+        if model.config.vocab_size == 32000:
+            model.resize_token_embeddings(model.config.vocab_size + 1, mean_resizing=False)
         return model
 
     def load_tokenizer(self, *args, **kwargs) -> PreTrainedTokenizer:
