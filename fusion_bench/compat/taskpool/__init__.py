@@ -23,6 +23,7 @@ class TaskPoolFactory:
         "NYUv2TaskPool": "fusion_bench.taskpool.nyuv2_taskpool.NYUv2TaskPool",
         "PENTaskPool": ".pen.PENTaskPool",
         "PERMTaskPool": ".perm.PERMTaskPool",
+        "SkillMixTaskPool": ".skillmix.SkillMixTaskPool",
     }
 
     @staticmethod

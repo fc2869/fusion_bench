@@ -11,12 +11,13 @@ models:
     _target_: transformers.LlamaForCausalLM.from_pretrained
     # pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_pe
     # pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_copynext
-    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/perm_pem
+    # pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/perm_pem
+    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/skillmix_atomic_literary
   expert_2:
     _target_: transformers.LlamaForCausalLM.from_pretrained
     # pretrained_model_name_or_path: /data2/users/fcyin/composition_large_model_ckpts/finetuned/pen_copynext
     # pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/pen_pe
-    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/perm_per
+    pretrained_model_name_or_path: /scratch/10269/fcyin/finetuned_ckpts/full_ckpts/skillmix_atomic_rhetorical
 
 model_kwargs:
   torch_dtype: bfloat16
@@ -31,10 +32,17 @@ tokenizer:
 #     name: pen
 #     tokenizer: ${...tokenizer}
 #     split: train
-_dataset_loader: fusion_bench.tasks.PERM.perm_load_dataset.load_perm_dataset
+# _dataset_loader: fusion_bench.tasks.PERM.perm_load_dataset.load_perm_dataset
+# train_datasets:
+#   perm_perm:
+#     _target_: ${..._dataset_loader}
+#     name: perm
+#     tokenizer: ${...tokenizer}
+#     split: train
+_dataset_loader: fusion_bench.tasks.skillmix.skillmix_load_dataset.load_skillmix_dataset
 train_datasets:
-  perm_perm:
+  skillmix_literary_rhetorical:
     _target_: ${..._dataset_loader}
-    name: perm
+    name: literary_rhetorical
     tokenizer: ${...tokenizer}
     split: train

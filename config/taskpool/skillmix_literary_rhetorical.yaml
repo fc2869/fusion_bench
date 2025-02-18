@@ -1,0 +1,16 @@
+name: skillmix_literary_rhetorical # whatever you want to name your task pool
+type: SkillMixTaskPool
+tasks:
+  - name: literary_rhetorical
+    dataset:
+      name: literary_rhetorical
+      split: test
+
+# tokenizer: /data2/shared_resources/models/llama2/hf/llama-2-7b
+tokenizer: meta-llama/Llama-2-7b-hf
+# cache directory for storing the preprocessed data
+cache_dir: outputs/cache
+batch_size: 2
+num_workers: 4
+fast_dev_run: ${fast_dev_run}
+output_dir: outputs
